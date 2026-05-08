@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16
+    container_name: postgres_db
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/postgresql/data
+
+  api:
+    build: ./api
+    image: telemetry-api:latest
+    container_name: flask_api
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logs:/app/logs
+  dashboard:
+    build: ./dashboard
+    image: telemetry-dashboard:latest
+    container_name: streamlit_dashboard
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./dashboard:/app
+volumes:
+  db_data:

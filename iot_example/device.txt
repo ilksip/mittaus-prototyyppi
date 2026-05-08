@@ -1,0 +1,4 @@
+Parts used:
+WEMOS D1 Mini ESP8266
+HC-SR04 Ultrasonic sensor
+
