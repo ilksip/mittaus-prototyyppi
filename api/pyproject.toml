@@ -1,0 +1,18 @@
+[tool.ruff]
+# Enable specific rule sets
+select = [
+    "E",   # pycodestyle errors (standard formatting)
+    "F",   # Pyflakes (logic errors/missing imports)
+    "I",   # isort (keeps your imports sorted alphabetically)
+    "Q",   # flake8-quotes (enforces your quote preference)
+]
+
+[tool.ruff.lint.flake8-quotes]
+# Enforce double quotes for all strings
+inline-quotes = "double"
+multiline-quotes = "double"
+docstring-quotes = "double"
+
+[tool.ruff.format]
+# Ensure the formatter also uses double quotes
+quote-style = "double"

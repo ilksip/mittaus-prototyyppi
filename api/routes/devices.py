@@ -15,7 +15,11 @@ def register_device():
         with get_conn() as conn:
             with conn.cursor() as cur:
                 # Check if MAC address already registered
-                cur.execute("SELECT device_id FROM Devices WHERE mac_address = %s", (payload.mac_address,))
+                cur.execute("""
+                    SELECT device_id 
+                    FROM Devices 
+                    WHERE mac_address = %s
+                    """, (payload.mac_address,))
                 row = cur.fetchone()
 
                 if row:
@@ -23,17 +27,30 @@ def register_device():
                     return jsonify({"uuid": str(row["device_id"]) }), 201
 
                 # If not, Register device into database
-                cur.execute("""INSERT INTO Devices (mac_address) VALUES (%s) RETURNING device_id""", (payload.mac_address,))
+                cur.execute("""
+                INSERT INTO Devices (mac_address)
+                VALUES (%s)
+                RETURNING device_id
+                """, (payload.mac_address,))
                 new_uuid = cur.fetchone()["device_id"]
 
-                cur.execute("SELECT sensor_type, trigger_value, trigger_when_below, alert_message FROM Default_Thresholds")
+                cur.execute("""
+                    SELECT sensor_type, trigger_value, trigger_when_below, alert_message
+                    FROM Default_Thresholds
+                    """)
                 # add default thresholds
                 defaults = cur.fetchall()
                 for t in defaults:
-                    cur.execute("""INSERT INTO Alert_Thresholds
+                    cur.execute("""
+                        INSERT INTO Alert_Thresholds
                         (device_id,trigger_value,sensor_type,trigger_when_below,alert_message)
-                        VALUES (%s, %s, %s, %s, %s);""",
-                        (new_uuid,t["trigger_value"],t["sensor_type"],t["trigger_when_below"],t["alert_message"]))
+                        VALUES (%s, %s, %s, %s, %s);
+                        """, (
+                        new_uuid,
+                        t["trigger_value"],
+                        t["sensor_type"],
+                        t["trigger_when_below"],
+                        t["alert_message"]))
 
                 logger.info(f"Added new device {new_uuid}.")        
                 return jsonify({"uuid": str(new_uuid)}), 201
@@ -47,7 +64,11 @@ def list_devices():
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT * FROM Devices ORDER BY serial_number")
+                cur.execute("""
+                    SELECT * 
+                    FROM Devices 
+                    ORDER BY serial_number
+                    """)
                 devices = cur.fetchall()
                 return jsonify(devices), 200
 
