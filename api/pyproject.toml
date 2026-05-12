@@ -6,6 +6,8 @@ select = [
     "I",   # isort (keeps your imports sorted alphabetically)
     "Q",   # flake8-quotes (enforces your quote preference)
 ]
+[tool.ruff.lint]
+ignore = ["E501"]
 
 [tool.ruff.lint.flake8-quotes]
 # Enforce double quotes for all strings

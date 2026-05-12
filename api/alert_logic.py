@@ -79,11 +79,11 @@ def handle_alert_logic(device_id: str, sensor_values: dict, created_at, conn):
                 logger.debug("Fill level")  
                 # alter fill level from sensor value into percentage if fill_level
                 real_measurement = value - device["height_buffer"]
-                fill_percentage = ((device["bin_height"] - (real_measurement)) / device["bin_height"]) * 100  # noqa: E501
+                fill_percentage = ((device["bin_height"] - (real_measurement)) / device["bin_height"]) * 100
                 check_value = min(fill_percentage, 100)
 
                 logger.debug(
-                    f"Space left: {round(real_measurement, 2)}cm out of {device['bin_height']}cm\n" # noqa: E501
+                    f"Space left: {round(real_measurement, 2)}cm out of {device['bin_height']}cm\n"
                     f"Fill level: {check_value:.2f}%")
             
             selected = get_triggered_threshold(relevant, check_value)
@@ -91,11 +91,11 @@ def handle_alert_logic(device_id: str, sensor_values: dict, created_at, conn):
             if not selected:
                 logger.debug("No thresholds triggered!")
                 continue
-            logger.debug(f"Triggered: {selected['sensor_type']}: {selected['trigger_value']}")  # noqa: E501
+            logger.debug(f"Triggered: {selected['sensor_type']}: {selected['trigger_value']}")
 
             # Deduplication (no mail if already sent in 24h)
-            if is_duplicate_alert(cur, device_id, sensor_type, selected["trigger_value"]): # noqa: E501
-                logger.debug("An alert has already been sent in past 24 hours! Skipping...")  # noqa: E501
+            if is_duplicate_alert(cur, device_id, sensor_type, selected["trigger_value"]):
+                logger.debug("An alert has already been sent in past 24 hours! Skipping...")
                 continue        
             # Get all e-mails to send to
             emails = get_email_addresses(cur, device_id)
