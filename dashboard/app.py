@@ -2,22 +2,21 @@ import streamlit as st
 import pandas as pd
 import requests
 
-def get_users():
-    response = requests.get(f"{API_BASE_URL}/users")
+API_BASE_URL = "http://api:5000/api" #points to docker container "api"
+DEVICES_URL = f"{API_BASE_URL}/devices"
+CONTACTS_URL = f"{API_BASE_URL}/contacts"
+def get_contacts():
+    response = requests.get(f"{CONTACTS_URL}")
     return response.json() if response.status_code == 200 else []
 
 def get_devices():
-    response = requests.get(f"{API_BASE_URL}/devices")
+    response = requests.get(f"{DEVICES_URL}")
     return response.json() if response.status_code == 200 else []
 
 def get_telemetry(device_id):
-    response = requests.get(f"{API_BASE_URL}/devices/{device_id}/telemetry")
+    response = requests.get(f"{DEVICES_URL}/{device_id}/telemetry")
     return response.json() if response.status_code == 200 else []
 
-
-API_BASE_URL = "http://api:5000/api" #points to docker container "api"
-DEVICES_URL = f"{API_BASE_URL}/devices"
-USERS_URL = f"{API_BASE_URL}/users"
 
 st.set_page_config(page_title="Jäte Dashboard", layout="wide")
 st.title("Dashboard")
@@ -69,47 +68,47 @@ except Exception as e:
     st.error(f"Error loading devices: {e}")
 
 st.divider()
-st.subheader("User Management")
+st.subheader("Device contact management")
 
-data = get_users()
+data = get_contacts()
 if not data:
     # Create an empty DataFrame with the specific columns your API expects
-    users_df = pd.DataFrame(columns=["user_id", "name", "email"])
+    contacts_df = pd.DataFrame(columns=["contact_id", "name", "email"])
 else:
-    users_df = pd.DataFrame(data)
+    contacts_df = pd.DataFrame(data)
 
 st.data_editor(
-    users_df,
+    contacts_df,
     column_config={
-        "user_id": st.column_config.NumberColumn("ID", disabled=True),
+        "contact_id": st.column_config.NumberColumn("ID", disabled=True),
         "name": st.column_config.TextColumn("Full Name", required=True),
         "email": st.column_config.TextColumn("Email Address", required=True),
     },
     num_rows="dynamic",
-    key="user_editor_state" 
+    key="contact_editor_state" 
 )
 
-if st.button("Sync users"):
-    state = st.session_state["user_editor_state"]
+if st.button("Sync device contacts"):
+    state = st.session_state["contact_editor_state"]
     
     # delete
     for index in state["deleted_rows"]:
-        user_id = users_df.iloc[index]["user_id"]
-        requests.delete(f"{USERS_URL}/{user_id}")
+        contact_id = contacts_df.iloc[index]["contact_id"]
+        requests.delete(f"{CONTACTS_URL}/{contact_id}")
 
     # add
     for row in state["added_rows"]:
         if row.get("name") and row.get("email"):
-            requests.post(USERS_URL, json=row)
+            requests.post(CONTACTS_URL, json=row)
 
     # update
     for index, changes in state["edited_rows"].items():
         # Get original record
-        user_id = users_df.iloc[int(index)]["user_id"]
-        original_row = users_df.iloc[int(index)].to_dict()
+        contact_id = contacts_df.iloc[int(index)]["contact_id"]
+        original_row = contacts_df.iloc[int(index)].to_dict()
         # Merge changes into original row
         updated_row = {**original_row, **changes}
-        requests.put(f"{USERS_URL}/{user_id}", json=updated_row)
+        requests.put(f"{CONTACTS_URL}/{contact_id}", json=updated_row)
 
     st.success("Changes applied successfully!")
     st.rerun()
@@ -122,15 +121,15 @@ st.subheader("Alert Notifications")
 
 # 1. Fetch data from API
 devices_list = requests.get(DEVICES_URL).json()
-users_list = requests.get(USERS_URL).json()
+contacts_list = requests.get(CONTACTS_URL).json()
 
-if devices_list and users_list:
+if devices_list and contacts_list:
     # Prepare DataFrames for easy filtering
     df_devices = pd.DataFrame(devices_list)
-    df_users = pd.DataFrame(users_list)
+    df_contacts = pd.DataFrame(contacts_list)
     
     # Create searchable labels
-    df_users['label'] = df_users['name'] + " (" + df_users['email'] + ")"
+    df_contacts['label'] = df_contacts['name'] + " (" + df_contacts['email'] + ")"
     
     # UI: Device Selection
     selected_device_name = st.selectbox(
@@ -143,23 +142,23 @@ if devices_list and users_list:
     current_ids_resp = requests.get(f"{DEVICES_URL}/{selected_device_id}/recipients")
     current_ids = current_ids_resp.json() if current_ids_resp.status_code == 200 else []
 
-    # 3. UI: Multiselect for Users
-    selected_user_labels = st.multiselect(
-        "Users to notify for this device:",
-        options=df_users['label'].tolist(),
+    # 3. UI: Multiselect for contacts
+    selected_contact_labels = st.multiselect(
+        "Contacts to notify for this device:",
+        options=df_contacts['label'].tolist(),
         # Match current IDs to their labels for the default view
-        default=df_users[df_users['user_id'].isin(current_ids)]['label'].tolist()
+        default=df_contacts[df_contacts['contact_id'].isin(current_ids)]['label'].tolist()
     )
 
     # 4. Update Button
     if st.button("Update Alert Recipients"):
         # Map labels back to IDs
-        chosen_ids = df_users[df_users['label'].isin(selected_user_labels)]['user_id'].tolist()
+        chosen_ids = df_contacts[df_contacts['label'].isin(selected_contact_labels)]['contact_id'].tolist()
         
         # Send sync request to API
         sync_resp = requests.post(
             f"{API_BASE_URL}/devices/{selected_device_id}/recipients",
-            json={"user_ids": chosen_ids}
+            json={"contact_ids": chosen_ids}
         )
         
         if sync_resp.status_code == 200:
@@ -167,7 +166,7 @@ if devices_list and users_list:
         else:
             st.error("Failed to update recipients.")
 else:
-    st.info("Ensure you have created at least one Device and one User first.")
+    st.info("Ensure you have created at least one device and one contact first.")
 
 # LINE GRAPH
 

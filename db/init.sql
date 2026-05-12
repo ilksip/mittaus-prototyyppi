@@ -11,8 +11,8 @@ CREATE TABLE Devices (
     alerts_enabled BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE Users (
-    user_id SERIAL PRIMARY KEY,
+CREATE TABLE Contacts (
+    contact_id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL
 );
@@ -37,18 +37,18 @@ CREATE INDEX idx_telemetry_sensor_values
 
 CREATE TABLE Alert_Recipients (
     device_id UUID NOT NULL,
-    user_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
 
-    PRIMARY KEY (device_id, user_id),
+    PRIMARY KEY (device_id, contact_id),
     
     CONSTRAINT fk_alertrec_device
         FOREIGN KEY (device_id)
         REFERENCES Devices(device_id)
         ON DELETE CASCADE,
 
-    CONSTRAINT fk_alertrec_user
-        FOREIGN KEY (user_id)
-        REFERENCES Users(user_id)
+    CONSTRAINT fk_alertrec_contact
+        FOREIGN KEY (contact_id)
+        REFERENCES Contacts(contact_id)
         ON DELETE CASCADE
 );
 

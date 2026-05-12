@@ -100,18 +100,18 @@ def get_device_recipients(device_id):
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT user_id FROM Alert_Recipients WHERE device_id = %s",
+                    "SELECT contact_id FROM Alert_Recipients WHERE device_id = %s",
                     (device_id,)
                 )
-                recipients = [row["user_id"] for row in cur.fetchall()]
+                recipients = [row["contact_id"] for row in cur.fetchall()]
                 return jsonify(recipients), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @devices_bp.route("/devices/<device_id>/recipients", methods=["POST"])
 def sync_device_recipients(device_id):
-    data = request.json  # Expects a list of user_ids: [1, 2, 3]
-    new_user_ids = data.get("user_ids", [])
+    data = request.json  # Expects a list of contact_ids: [1, 2, 3]
+    new_contact_ids = data.get("contact_ids", [])
     
     try:
         with get_conn() as conn:
@@ -120,9 +120,9 @@ def sync_device_recipients(device_id):
                 cur.execute("DELETE FROM Alert_Recipients WHERE device_id = %s", (device_id,))
                 
                 # 2. Insert new links
-                for uid in new_user_ids:
+                for uid in new_contact_ids:
                     cur.execute(
-                        "INSERT INTO Alert_Recipients (device_id, user_id) VALUES (%s, %s)",
+                        "INSERT INTO Alert_Recipients (device_id, contact_id) VALUES (%s, %s)",
                         (device_id, uid)
                     )
             conn.commit()

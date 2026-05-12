@@ -6,64 +6,64 @@ from database import get_conn
 
 logger = logging.getLogger(__name__)
 
-users_bp = Blueprint("users", __name__)
+contacts_bp = Blueprint("contacts", __name__)
 
-@users_bp.route("/users", methods=["GET"])
-def get_users():
+@contacts_bp.route("/contacts", methods=["GET"])
+def get_contacts():
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT user_id, name, email
-                    FROM Users
-                    ORDER BY user_id ASC
+                    SELECT contact_id, name, email
+                    FROM Contacts
+                    ORDER BY contact_id ASC
                     """)
                 return jsonify(cur.fetchall()), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@users_bp.route("/users", methods=["POST"])
-def create_user():
+@contacts_bp.route("/contacts", methods=["POST"])
+def create_contact():
     data = request.json
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO Users (name, email)
+                    INSERT INTO Contacts (name, email)
                     VALUES (%s, %s)
-                    RETURNING user_id
+                    RETURNING contact_id
                     """, (data["name"], data["email"]))
-                new_id = cur.fetchone()["user_id"]
+                new_id = cur.fetchone()["contact_id"]
             conn.commit()
-            return jsonify({"user_id": new_id}), 201
+            return jsonify({"contact_id": new_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
             
-@users_bp.route("/users/<user_id>", methods=["PUT"])
-def update_user(user_id):
+@contacts_bp.route("/contacts/<contact_id>", methods=["PUT"])
+def update_contact(contact_id):
     data = request.json
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    UPDATE Users
+                    UPDATE Contacts
                     SET name = %s, email = %s
-                    WHERE user_id = %s
-                    """, (data["name"], data["email"], user_id))
+                    WHERE contact_id = %s
+                    """, (data["name"], data["email"], contact_id))
             conn.commit()
             return jsonify({"message": "Updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@users_bp.route("/users/<user_id>", methods=["DELETE"])
-def delete_user(user_id):
+@contacts_bp.route("/contacts/<contact_id>", methods=["DELETE"])
+def delete_contact(contact_id):
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    DELETE FROM Users
-                    WHERE user_id = %s
-                    """, (user_id,))
+                    DELETE FROM contacts
+                    WHERE contact_id = %s
+                    """, (contact_id,))
             conn.commit()
             return jsonify({"message": "Deleted"}), 200
     except Exception as e:
