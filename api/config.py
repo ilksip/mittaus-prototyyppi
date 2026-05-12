@@ -1,6 +1,9 @@
-import os, sys, logging
-from zoneinfo import ZoneInfo
+import logging
+import os
+import sys
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
 
 class Config:
     # Database access
@@ -16,9 +19,9 @@ class Config:
     SMTP_USER= os.getenv("SMTP_USER")
     SMTP_PASS= os.getenv("SMTP_PASS")
     # Misc settings
-    LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() in ('true', '1', 't')
+    LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() in ("true", "1", "t")
     LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "/app/logs/api.log")
-    DEBUG = os.getenv("DEBUG", "false").lower() in ('true', '1', 't')
+    DEBUG = os.getenv("DEBUG", "false").lower() in ("true", "1", "t")
     TZ_STR = os.getenv("APP_TIMEZONE", "UTC")
     TZ_INFO = ZoneInfo(TZ_STR)
     @property
@@ -53,7 +56,6 @@ def setup_app_logging():
         dt = datetime.now(settings.TZ_INFO)
         return dt.timetuple()
 
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logging.Formatter.converter = custom_time_converter
 
 def format_timestamp(dt_from_db):

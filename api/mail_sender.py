@@ -1,9 +1,10 @@
+import logging
 import smtplib
+import threading
 from email.message import EmailMessage
-from datetime import datetime
-from config import settings, format_timestamp
-import os, threading, logging
-from database import get_conn, INSERT_ALERT_EVENT
+
+from config import format_timestamp, settings
+from database import INSERT_ALERT_EVENT, get_conn
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ def send_mail_alerts(address: str, device_id: str, device_name: str, sensor_type
     timestamp_str = format_timestamp(created_at)
     logger.debug("SENDING EMAIL")
     msg = EmailMessage()
-    msg["Subject"] = f"Alert for device \"{device_name}\""
+    msg["Subject"] = f"Alert for device '{device_name}'"
     msg["From"] = SMTP_USER
     msg["To"] = address
 
