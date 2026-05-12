@@ -60,7 +60,7 @@ def register_device():
         return jsonify({"error": str(e)}), 500
 
 @devices_bp.route("/devices", methods=["GET"])
-def list_devices():
+def get_devices():
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -72,5 +72,60 @@ def list_devices():
                 devices = cur.fetchall()
                 return jsonify(devices), 200
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@devices_bp.route("/devices/<device_id>", methods=["PUT"])
+def update_device(device_id):
+    data = request.json
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE Devices
+                    SET device_name = %s, height_buffer = %s, 
+                        bin_height = %s, alerts_enabled = %s
+                    WHERE device_id = %s
+                    """, (data["device_name"], data["height_buffer"], 
+                    data["bin_height"], data["alerts_enabled"], device_id))
+            conn.commit()
+            return jsonify({"message": "Updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# --- GET RECIPIENTS FOR A DEVICE ---
+@devices_bp.route("/devices/<device_id>/recipients", methods=["GET"])
+def get_device_recipients(device_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT user_id FROM Alert_Recipients WHERE device_id = %s",
+                    (device_id,)
+                )
+                recipients = [row["user_id"] for row in cur.fetchall()]
+                return jsonify(recipients), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@devices_bp.route("/devices/<device_id>/recipients", methods=["POST"])
+def sync_device_recipients(device_id):
+    data = request.json  # Expects a list of user_ids: [1, 2, 3]
+    new_user_ids = data.get("user_ids", [])
+    
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                # 1. Clear existing links for this device
+                cur.execute("DELETE FROM Alert_Recipients WHERE device_id = %s", (device_id,))
+                
+                # 2. Insert new links
+                for uid in new_user_ids:
+                    cur.execute(
+                        "INSERT INTO Alert_Recipients (device_id, user_id) VALUES (%s, %s)",
+                        (device_id, uid)
+                    )
+            conn.commit()
+            return jsonify({"message": "Recipients updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

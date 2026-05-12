@@ -11,7 +11,6 @@ Palvelin, joka sisältää 1. tietokannan, 2. REST API:n vastaanottamaan IoT-mit
     * lisää skeemoja, oikea validointi
     * autentikointi
 3. dashboard:
-    * Siirrä dashboard käyttämään rajapintaa, eikä suoria tietokantakyselyitä
     * Parempi visualisointi, kun laitteita on paljon
     * Korjaa nappien toiminta
     * Käytä kevyempää kirjastoa ja korjaa vibe-koodattu dashboard (eli tee kokonaan uusi)
