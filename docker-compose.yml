@@ -25,15 +25,11 @@ services:
   dashboard:
     build: ./dashboard
     image: telemetry-dashboard:latest
-    container_name: streamlit_dashboard
+    container_name: telemetry_dashboard
     restart: always
     depends_on:
-      - db
-    env_file:
-      - .env
+      - api
     ports:
-      - "8501:8501"
-    volumes:
-      - ./dashboard:/app
+      - "8501:80"
 volumes:
   db_data:
