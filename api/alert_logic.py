@@ -42,7 +42,7 @@ def get_triggered_threshold(relevant_thresholds, current_value):
         return max(triggered, key=lambda t: t["trigger_value"])
 def get_email_addresses(cur, device_id):
     cur.execute("""
-        SELECT u.email 
+        SELECT c.email 
         FROM Alert_Recipients ar JOIN Contacts c 
         ON ar.contact_id = c.contact_id 
         WHERE ar.device_id = %s;
