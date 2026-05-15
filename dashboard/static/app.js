@@ -25,6 +25,7 @@ const thresholdColumns = [
 ];
 
 const sensorTypes = ["fill_level", "temperature", "weight", "battery"];
+let telemetryChart = null;
 
 function dashboard() {
   return {
@@ -51,8 +52,8 @@ function dashboard() {
     selectedThresholdDeviceId: "",
     selectedTelemetryDeviceId: "",
     telemetryLimit: 100,
+    telemetryLoaded: false,
     telemetryRows: [],
-    chart: null,
 
     get selectedTelemetryDevice() {
       return this.devices.find((device) => device.device_id === this.selectedTelemetryDeviceId);
@@ -71,6 +72,13 @@ function dashboard() {
       const first = this.formatDate(rows[0].created_at);
       const last = this.formatDate(rows.at(-1).created_at);
       return `${first} to ${last}`;
+    },
+
+    get telemetryEmptyLabel() {
+      if (!this.telemetryLoaded || !this.selectedTelemetryDeviceId) return "";
+      if (!this.telemetryRows.length) return "No telemetry found for this device.";
+      if (!this.fillPercentagePoints().length) return "No valid fill_level telemetry found for this device.";
+      return "";
     },
 
     async init() {
@@ -299,8 +307,15 @@ function dashboard() {
         this.telemetryRows = rows
           .slice()
           .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        this.renderChart();
+        this.telemetryLoaded = true;
+        this.$nextTick(() => this.renderChart());
       });
+    },
+
+    clearTelemetry() {
+      this.telemetryRows = [];
+      this.telemetryLoaded = false;
+      this.destroyTelemetryChart();
     },
 
     fillPercentagePoints() {
@@ -334,14 +349,19 @@ function dashboard() {
       const labels = points.map((point) => point.x);
       const data = points.map((point) => point.y);
 
-      if (this.chart) {
-        this.chart.data.labels = labels;
-        this.chart.data.datasets[0].data = data;
-        this.chart.update();
+      if (!points.length) {
+        this.destroyTelemetryChart();
         return;
       }
 
-      this.chart = new Chart(canvas, {
+      if (telemetryChart) {
+        telemetryChart.data.labels = labels;
+        telemetryChart.data.datasets[0].data = data;
+        telemetryChart.update();
+        return;
+      }
+
+      telemetryChart = new Chart(canvas, {
         type: "line",
         data: {
           labels,
@@ -374,6 +394,13 @@ function dashboard() {
           },
         },
       });
+    },
+
+    destroyTelemetryChart() {
+      if (!telemetryChart) return;
+
+      telemetryChart.destroy();
+      telemetryChart = null;
     },
 
     formatDate(value) {

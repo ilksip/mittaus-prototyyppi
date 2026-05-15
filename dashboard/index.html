@@ -261,7 +261,7 @@
         </div>
 
         <form class="inline-form" @submit.prevent="fetchTelemetry()">
-          <select x-model="selectedTelemetryDeviceId" @change="telemetryRows = []; renderChart()" required>
+          <select x-model="selectedTelemetryDeviceId" @change="clearTelemetry()" required>
             <option value="">Select device</option>
             <template x-for="device in devices" :key="device.device_id">
               <option :value="device.device_id" x-text="deviceLabel(device)"></option>
@@ -287,6 +287,7 @@
             </div>
           </div>
           <div class="chart-panel">
+            <p class="chart-empty" x-show="telemetryEmptyLabel" x-text="telemetryEmptyLabel"></p>
             <canvas id="telemetryChart" height="120"></canvas>
           </div>
         </div>
