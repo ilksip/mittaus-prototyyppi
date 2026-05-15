@@ -16,6 +16,16 @@ const contactColumns = [
   { key: "email", label: "Email", type: "email" },
 ];
 
+const thresholdColumns = [
+  { key: "threshold_id", label: "ID", type: "readonly" },
+  { key: "sensor_type", label: "Sensor", type: "select" },
+  { key: "trigger_value", label: "Value", type: "number", min: 0 },
+  { key: "trigger_when_below", label: "Below", type: "checkbox" },
+  { key: "alert_message", label: "Message", type: "text" },
+];
+
+const sensorTypes = ["fill_level", "temperature", "weight", "battery"];
+
 function dashboard() {
   return {
     activeTab: "devices",
@@ -24,11 +34,21 @@ function dashboard() {
     message: "",
     devices: [],
     contacts: [],
+    thresholds: [],
     deviceColumns,
     contactColumns,
+    thresholdColumns,
+    sensorTypes,
     newContact: { name: "", email: "" },
+    newThreshold: {
+      sensor_type: "fill_level",
+      trigger_value: 90,
+      trigger_when_below: false,
+      alert_message: "",
+    },
     selectedAssignmentDeviceId: "",
     selectedRecipientIds: [],
+    selectedThresholdDeviceId: "",
     selectedTelemetryDeviceId: "",
     telemetryLimit: 100,
     telemetryRows: [],
@@ -72,6 +92,12 @@ function dashboard() {
         }
         if (!this.selectedTelemetryDeviceId && devices.length) {
           this.selectedTelemetryDeviceId = devices[0].device_id;
+        }
+        if (!this.selectedThresholdDeviceId && devices.length) {
+          this.selectedThresholdDeviceId = devices[0].device_id;
+        }
+        if (this.selectedThresholdDeviceId) {
+          await this.loadThresholds(false);
         }
       });
     },
@@ -195,6 +221,72 @@ function dashboard() {
           body: JSON.stringify({ contact_ids: this.selectedRecipientIds.map(Number) }),
         });
       }, "Assignments saved.");
+    },
+
+    async loadThresholds(showErrors = true) {
+      if (!this.selectedThresholdDeviceId) {
+        this.thresholds = [];
+        return;
+      }
+
+      const load = async () => {
+        this.thresholds = await this.request(`/devices/${this.selectedThresholdDeviceId}/thresholds`);
+      };
+
+      if (showErrors) {
+        await this.run(load);
+      } else {
+        await load();
+      }
+    },
+
+    thresholdPayload(threshold) {
+      return {
+        sensor_type: threshold.sensor_type,
+        trigger_value: Number(threshold.trigger_value),
+        trigger_when_below: Boolean(threshold.trigger_when_below),
+        alert_message: threshold.alert_message,
+      };
+    },
+
+    async createThreshold() {
+      await this.run(async () => {
+        await this.request(`/devices/${this.selectedThresholdDeviceId}/thresholds`, {
+          method: "POST",
+          body: JSON.stringify(this.thresholdPayload(this.newThreshold)),
+        });
+        this.newThreshold = {
+          sensor_type: "fill_level",
+          trigger_value: 90,
+          trigger_when_below: false,
+          alert_message: "",
+        };
+        await this.loadThresholds(false);
+      }, "Threshold added.");
+    },
+
+    async saveThreshold(threshold) {
+      await this.run(async () => {
+        await this.request(
+          `/devices/${this.selectedThresholdDeviceId}/thresholds/${threshold.threshold_id}`,
+          {
+            method: "PUT",
+            body: JSON.stringify(this.thresholdPayload(threshold)),
+          },
+        );
+      }, "Threshold saved.");
+    },
+
+    async deleteThreshold(threshold) {
+      if (!confirm(`Delete threshold ${threshold.threshold_id}?`)) return;
+
+      await this.run(async () => {
+        await this.request(
+          `/devices/${this.selectedThresholdDeviceId}/thresholds/${threshold.threshold_id}`,
+          { method: "DELETE" },
+        );
+        this.thresholds = this.thresholds.filter((item) => item.threshold_id !== threshold.threshold_id);
+      }, "Threshold deleted.");
     },
 
     async fetchTelemetry() {

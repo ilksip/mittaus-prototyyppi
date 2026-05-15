@@ -12,8 +12,7 @@
   <body x-data="dashboard()" x-init="init()">
     <header class="app-header">
       <div>
-        <h1>Jate Dashboard</h1>
-        <p>Device configuration, alert recipients, and telemetry.</p>
+        <h1>Jäte Dashboard</h1>
       </div>
       <button type="button" class="button button-secondary" @click="refreshAll()" :disabled="loading">
         Refresh
@@ -25,6 +24,7 @@
         <button type="button" :class="{ active: activeTab === 'devices' }" @click="activeTab = 'devices'">Devices</button>
         <button type="button" :class="{ active: activeTab === 'contacts' }" @click="activeTab = 'contacts'">Contacts</button>
         <button type="button" :class="{ active: activeTab === 'assignments' }" @click="activeTab = 'assignments'">Assignments</button>
+        <button type="button" :class="{ active: activeTab === 'thresholds' }" @click="activeTab = 'thresholds'">Thresholds</button>
         <button type="button" :class="{ active: activeTab === 'telemetry' }" @click="activeTab = 'telemetry'">Telemetry</button>
       </nav>
 
@@ -167,6 +167,88 @@
 
         <div class="button-row" x-show="selectedAssignmentDeviceId">
           <button type="button" class="button" @click="saveRecipients()">Save Assignments</button>
+        </div>
+      </section>
+
+      <section x-show="activeTab === 'thresholds'" x-cloak>
+        <div class="section-heading">
+          <div>
+            <h2>Alert Thresholds</h2>
+            <p>Manage when selected device sends alert notifications.</p>
+          </div>
+          <select x-model="selectedThresholdDeviceId" @change="loadThresholds()">
+            <option value="">Select device</option>
+            <template x-for="device in devices" :key="device.device_id">
+              <option :value="device.device_id" x-text="deviceLabel(device)"></option>
+            </template>
+          </select>
+        </div>
+
+        <form class="threshold-form" x-show="selectedThresholdDeviceId" @submit.prevent="createThreshold()">
+          <select x-model="newThreshold.sensor_type" required aria-label="Sensor type">
+            <template x-for="sensorType in sensorTypes" :key="sensorType">
+              <option :value="sensorType" x-text="sensorType"></option>
+            </template>
+          </select>
+          <input type="number" min="0" x-model.number="newThreshold.trigger_value" aria-label="Trigger value" required>
+          <label class="check-field">
+            <input type="checkbox" x-model="newThreshold.trigger_when_below">
+            <span>Trigger below</span>
+          </label>
+          <input type="text" x-model.trim="newThreshold.alert_message" placeholder="Alert message" required>
+          <button type="submit" class="button">Add Threshold</button>
+        </form>
+
+        <div class="table-wrap" x-show="selectedThresholdDeviceId">
+          <table>
+            <thead>
+              <tr>
+                <template x-for="column in thresholdColumns" :key="column.key">
+                  <th x-text="column.label"></th>
+                </template>
+                <th class="actions-cell">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="threshold in thresholds" :key="threshold.threshold_id">
+                <tr>
+                  <template x-for="column in thresholdColumns" :key="column.key">
+                    <td>
+                      <template x-if="column.type === 'readonly'">
+                        <span class="mono" x-text="threshold[column.key]"></span>
+                      </template>
+                      <template x-if="column.type === 'select'">
+                        <select x-model="threshold[column.key]" :aria-label="column.label">
+                          <template x-for="sensorType in sensorTypes" :key="sensorType">
+                            <option :value="sensorType" x-text="sensorType"></option>
+                          </template>
+                        </select>
+                      </template>
+                      <template x-if="column.type === 'number'">
+                        <input type="number" x-model.number="threshold[column.key]" :min="column.min ?? null" :aria-label="column.label">
+                      </template>
+                      <template x-if="column.type === 'checkbox'">
+                        <label class="switch">
+                          <input type="checkbox" x-model="threshold[column.key]" :aria-label="column.label">
+                          <span></span>
+                        </label>
+                      </template>
+                      <template x-if="column.type === 'text'">
+                        <input type="text" x-model="threshold[column.key]" :aria-label="column.label">
+                      </template>
+                    </td>
+                  </template>
+                  <td class="actions-cell actions-inline">
+                    <button type="button" class="button" @click="saveThreshold(threshold)">Save</button>
+                    <button type="button" class="button button-danger" @click="deleteThreshold(threshold)">Delete</button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!thresholds.length">
+                <td :colspan="thresholdColumns.length + 1" class="empty">No thresholds configured for this device.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

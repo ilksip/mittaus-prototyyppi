@@ -8,6 +8,7 @@ from schemas import Device
 logger = logging.getLogger(__name__)
 devices_bp = Blueprint("devices", __name__)
 
+# Device management
 @devices_bp.route("/registerDevice", methods=["POST"])
 def register_device():
     try:
@@ -93,7 +94,7 @@ def update_device(device_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-# --- GET RECIPIENTS FOR A DEVICE ---
+# Device contact management
 @devices_bp.route("/devices/<device_id>/recipients", methods=["GET"])
 def get_device_recipients(device_id):
     try:
@@ -129,3 +130,110 @@ def sync_device_recipients(device_id):
             return jsonify({"message": "Recipients updated"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Device threshold management
+@devices_bp.route("/devices/<device_id>/thresholds", methods=["GET"])
+def get_device_thresholds(device_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT threshold_id, device_id, sensor_type, trigger_value,
+                           trigger_when_below, alert_message
+                    FROM Alert_Thresholds
+                    WHERE device_id = %s
+                    ORDER BY sensor_type, trigger_when_below, trigger_value
+                    """, (device_id,))
+                return jsonify(cur.fetchall()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+SENSOR_TYPES = {"fill_level", "temperature", "weight", "battery"}
+def threshold_payload(data):
+    sensor_type = data.get("sensor_type")
+    alert_message = data.get("alert_message", "").strip()
+    trigger_when_below = data.get("trigger_when_below")
+
+    if sensor_type not in SENSOR_TYPES:
+        raise ValueError("Invalid sensor type.")
+    if alert_message == "":
+        raise ValueError("Alert message is required.")
+    if not isinstance(trigger_when_below, bool):
+        raise ValueError("trigger_when_below must be true or false.")
+
+    return {
+        "sensor_type": sensor_type,
+        "trigger_value": int(data["trigger_value"]),
+        "trigger_when_below": trigger_when_below,
+        "alert_message": alert_message,
+    }
+
+@devices_bp.route("/devices/<device_id>/thresholds", methods=["POST"])
+def create_device_threshold(device_id):
+    try:
+        data = threshold_payload(request.json or {})
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO Alert_Thresholds (
+                        device_id, sensor_type, trigger_value,
+                        trigger_when_below, alert_message
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING threshold_id
+                    """, (
+                    device_id,
+                    data["sensor_type"],
+                    data["trigger_value"],
+                    data["trigger_when_below"],
+                    data["alert_message"]))
+                threshold_id = cur.fetchone()["threshold_id"]
+            conn.commit()
+            return jsonify({"threshold_id": threshold_id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@devices_bp.route("/devices/<device_id>/thresholds/<threshold_id>", methods=["PUT"])
+def update_device_threshold(device_id, threshold_id):
+    try:
+        data = threshold_payload(request.json or {})
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE Alert_Thresholds
+                    SET sensor_type = %s,
+                        trigger_value = %s,
+                        trigger_when_below = %s,
+                        alert_message = %s
+                    WHERE device_id = %s
+                    AND threshold_id = %s
+                    """, (
+                    data["sensor_type"],
+                    data["trigger_value"],
+                    data["trigger_when_below"],
+                    data["alert_message"],
+                    device_id,
+                    threshold_id))
+                if cur.rowcount == 0:
+                    return jsonify({"error": "Threshold not found"}), 404
+            conn.commit()
+            return jsonify({"message": "Updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@devices_bp.route("/devices/<device_id>/thresholds/<threshold_id>", methods=["DELETE"])
+def delete_device_threshold(device_id, threshold_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    DELETE FROM Alert_Thresholds
+                    WHERE device_id = %s
+                    AND threshold_id = %s
+                    """, (device_id, threshold_id))
+                if cur.rowcount == 0:
+                    return jsonify({"error": "Threshold not found"}), 404
+            conn.commit()
+            return jsonify({"message": "Deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
